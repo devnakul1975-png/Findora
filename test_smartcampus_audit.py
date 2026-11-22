@@ -211,7 +211,8 @@ def run_tests():
         "pages/admin.html",
         "pages/login.html",
         "pages/register.html",
-        "pages/how-it-works.html"
+        "pages/how-it-works.html",
+        "pages/developers.html"
     ]
     all_html_exist = True
     all_mobile_nav = True
@@ -225,7 +226,7 @@ def run_tests():
                 if 'id="menuToggle"' not in text or 'id="mobileNav"' not in text:
                     all_mobile_nav = False
 
-    assert_test("Frontend: All 9 Core HTML Pages Present", all_html_exist)
+    assert_test("Frontend: All 10 Core HTML Pages Present", all_html_exist)
     assert_test("UI-01: Mobile Navigation Drawer Present on All Sub-pages", all_mobile_nav)
 
     # Check dead file removal

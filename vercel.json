@@ -14,6 +14,9 @@
     { "source": "/admin/claims(.*)", "destination": "/api/index.py" },
     { "source": "/admin/reports(.*)", "destination": "/api/index.py" },
     { "source": "/uploads/(.*)", "destination": "/api/index.py" },
+    { "source": "/developers", "destination": "/pages/developers.html" },
+    { "source": "/team", "destination": "/pages/developers.html" },
+    { "source": "/about", "destination": "/pages/developers.html" },
     { "source": "/docs", "destination": "/api/index.py" },
     { "source": "/openapi.json", "destination": "/api/index.py" }
   ]
