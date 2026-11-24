@@ -267,12 +267,14 @@ For complete technical logs and security audit records, refer to:
 
 - **Institution**: [Madhav Institute of Technology & Science (MITS), Gwalior](https://web.mitsgwalior.in/) (Established 1957)
 - **Project**: Findora — Intelligent Campus Lost & Found Platform
-- **Lead Developer & System Architect**: **Dev Khandelwal**
-  - GitHub: [@devnakul1975-png](https://github.com/devnakul1975-png)
-  - Instagram: [@dev.khandelwal189](https://instagram.com/dev.khandelwal189)
-  - Email: `devnakul1975@gmail.com`
-- **Co-Developer & Core Contributor**: **Ayush Jha**
-  - Department of Computer Science & Engineering, MITS Gwalior
+- **Project Co-Leads & System Architects**:
+  - **Dev Khandelwal** (Full Stack Architect & Backend Lead)
+    - GitHub: [@devnakul1975-png](https://github.com/devnakul1975-png)
+    - Instagram: [@dev.khandelwal189](https://instagram.com/dev.khandelwal189)
+    - Email: `devnakul1975@gmail.com`
+  - **Ayush Jha** (Full Stack & Interactive UI/UX Lead)
+    - Department of Computer Science & Engineering / AI, MITS Gwalior
+    - Email: `ayush.jha@mitsgwl.ac.in`
 - **Under the Guidance of**:
   - **Dr. Kirti Raj Bhatele**, Assistant Professor, Department of Computer Science & Engineering, MITS Gwalior
   - Specialization: Artificial Intelligence, Deep Learning & Computer Vision
