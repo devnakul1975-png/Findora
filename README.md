@@ -273,8 +273,11 @@ For complete technical logs and security audit records, refer to:
     - Instagram: [@dev.khandelwal189](https://instagram.com/dev.khandelwal189)
     - Email: `devnakul1975@gmail.com`
   - **Ayush Jha** (Full Stack & Interactive UI/UX Lead)
+    - GitHub: [@WECID-coding](https://github.com/WECID-coding)
+    - Instagram: [@0blivious_mee](https://instagram.com/0blivious_mee)
+    - Email: `26cs1ay34@mitsgwl.ac.in`
+    - Phone: `+91 99262 96619`
     - Department of Computer Science & Engineering / AI, MITS Gwalior
-    - Email: `ayush.jha@mitsgwl.ac.in`
 - **Under the Guidance of**:
   - **Dr. Kirti Raj Bhatele**, Assistant Professor, Department of Computer Science & Engineering, MITS Gwalior
   - Specialization: Artificial Intelligence, Deep Learning & Computer Vision
