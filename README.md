@@ -283,4 +283,5 @@ For complete technical logs and security audit records, refer to:
 - **Under the Guidance of**:
   - **Dr. Kirti Raj Bhatele**, Assistant Professor, School of Computer Science and Engineering, MITS Gwalior
   - Specialization: Artificial Intelligence, Deep Learning & Computer Vision
+- **Batch**: 2026 - 2030 (B.Tech Computer Science & Engineering)
 - **Academic Year**: 2026
