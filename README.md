@@ -269,16 +269,18 @@ For complete technical logs and security audit records, refer to:
 - **Project**: Findora — Intelligent Campus Lost & Found Platform
 - **Project Co-Leads & System Architects**:
   - **Dev Khandelwal** (Full Stack Architect & Backend Lead)
+    - Branch: Computer Science & Engineering
     - GitHub: [@devnakul1975-png](https://github.com/devnakul1975-png)
     - Instagram: [@dev.khandelwal189](https://instagram.com/dev.khandelwal189)
     - Email: `devnakul1975@gmail.com`
   - **Ayush Jha** (Full Stack & Interactive UI/UX Lead)
+    - Branch: Computer Science & Engineering
     - GitHub: [@WECID-coding](https://github.com/WECID-coding)
     - Instagram: [@0blivious_mee](https://instagram.com/0blivious_mee)
-    - Email: `26cs1ay34@mitsgwl.ac.in`
+    - Email: `ayushkumarjha2026@gmail.com`
     - Phone: `+91 99262 96619`
-    - Department of Computer Science & Engineering / AI, MITS Gwalior
+    - Department: School of Computer Science and Engineering, MITS Gwalior
 - **Under the Guidance of**:
-  - **Dr. Kirti Raj Bhatele**, Assistant Professor, Department of Computer Science & Engineering, MITS Gwalior
+  - **Dr. Kirti Raj Bhatele**, Assistant Professor, School of Computer Science and Engineering, MITS Gwalior
   - Specialization: Artificial Intelligence, Deep Learning & Computer Vision
 - **Academic Year**: 2026
