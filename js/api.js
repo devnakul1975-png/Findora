@@ -139,6 +139,14 @@ function handleLocalFallback(endpoint, options = {}) {
     return session;
   }
 
+  if (path === '/auth/reset-password' && method === 'POST') {
+    const body = typeof options.body === 'string' ? JSON.parse(options.body) : {};
+    return {
+      status: 'success',
+      message: `Password updated successfully for ${body.email || 'account'}. You can now sign in.`
+    };
+  }
+
   if (path === '/auth/register' && method === 'POST') {
     const body = typeof options.body === 'string' ? JSON.parse(options.body) : {};
     const mockUser = {

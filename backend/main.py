@@ -79,6 +79,10 @@ class RegisterPayload(BaseModel):
     email: str
     password: str
 
+class ResetPasswordPayload(BaseModel):
+    email: str
+    new_password: str
+
 class ReportCreatePayload(BaseModel):
     type: str
     name: str
@@ -251,6 +255,43 @@ def login(payload: LoginPayload):
     return {
         "token": token,
         "user": user_data
+    }
+
+@app.post("/auth/reset-password")
+def reset_password(payload: ResetPasswordPayload):
+    email = (payload.email or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Institute Email or Username is required")
+    if not payload.new_password or len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters long")
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    is_admin = email in ["admin", "admin_mits", "administrator", "admin@mitsgwl.ac.in"]
+    clean_email = "admin@mitsgwl.ac.in" if is_admin else (email if "@" in email else f"{email}@mitsgwl.ac.in")
+
+    cur.execute("SELECT id, name, role FROM users WHERE LOWER(email) = ?", (clean_email.lower(),))
+    user_row = cur.fetchone()
+
+    hashed = hash_password(payload.new_password)
+
+    if user_row:
+        cur.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hashed, user_row["id"]))
+        conn.commit()
+    else:
+        role = "faculty" if "mitsgwalior.in" in clean_email else "student"
+        clean_name = clean_email.split("@")[0].replace(".", " ").title()
+        cur.execute(
+            "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+            (clean_name, clean_email.lower(), hashed, role)
+        )
+        conn.commit()
+
+    conn.close()
+    return {
+        "status": "success",
+        "message": f"Password for {clean_email} updated successfully. You can now sign in."
     }
 
 @app.post("/auth/register")

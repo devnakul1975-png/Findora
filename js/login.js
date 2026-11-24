@@ -64,4 +64,99 @@ document.addEventListener('DOMContentLoaded', () => {
       errorEl.hidden = false;
     }
   }
+
+  // Forgot Password Recovery Modal Controller
+  const forgotModal = document.getElementById('forgotModal');
+  const openForgotBtn = document.getElementById('openForgotModalBtn');
+  const closeForgotBtn = document.getElementById('closeForgotModal');
+  const cancelForgotBtn = document.getElementById('cancelForgotBtn');
+  const forgotForm = document.getElementById('forgotForm');
+  const forgotEmailInp = document.getElementById('forgotEmail');
+  const forgotNewPass = document.getElementById('forgotNewPass');
+  const forgotConfirmPass = document.getElementById('forgotConfirmPass');
+  const forgotError = document.getElementById('forgotError');
+  const forgotSuccess = document.getElementById('forgotSuccess');
+
+  function openForgotModal() {
+    if (!forgotModal) return;
+    if (forgotEmailInp && emailInp?.value) forgotEmailInp.value = emailInp.value.trim();
+    if (forgotError) forgotError.hidden = true;
+    if (forgotSuccess) forgotSuccess.hidden = true;
+    forgotModal.classList.add('open');
+  }
+
+  function closeForgotModal() {
+    if (!forgotModal) return;
+    forgotModal.classList.remove('open');
+  }
+
+  openForgotBtn?.addEventListener('click', openForgotModal);
+  closeForgotBtn?.addEventListener('click', closeForgotModal);
+  cancelForgotBtn?.addEventListener('click', closeForgotModal);
+
+  forgotModal?.addEventListener('click', (e) => {
+    if (e.target === forgotModal) closeForgotModal();
+  });
+
+  forgotForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (forgotError) forgotError.hidden = true;
+    if (forgotSuccess) forgotSuccess.hidden = true;
+
+    const email = forgotEmailInp?.value.trim();
+    const newPass = forgotNewPass?.value;
+    const confirmPass = forgotConfirmPass?.value;
+
+    if (!email) {
+      if (forgotError) {
+        forgotError.textContent = 'Please enter your institute email or roll number.';
+        forgotError.hidden = false;
+      }
+      return;
+    }
+
+    if (newPass.length < 6) {
+      if (forgotError) {
+        forgotError.textContent = 'Password must be at least 6 characters long.';
+        forgotError.hidden = false;
+      }
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      if (forgotError) {
+        forgotError.textContent = 'Passwords do not match. Please re-enter.';
+        forgotError.hidden = false;
+      }
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ email, new_password: newPass })
+      });
+
+      if (forgotSuccess) {
+        forgotSuccess.textContent = res.message || 'Password updated successfully! You can now sign in.';
+        forgotSuccess.hidden = false;
+      }
+
+      // Auto-fill into main login form
+      if (emailInp) emailInp.value = email;
+      if (passInp) passInp.value = newPass;
+
+      setTimeout(() => {
+        closeForgotModal();
+        if (typeof showToast === 'function') {
+          showToast('Password Updated', 'Your credentials were saved. Click Sign In to continue.');
+        }
+      }, 1200);
+    } catch (err) {
+      if (forgotError) {
+        forgotError.textContent = err.message || 'Failed to update password. Please check your email.';
+        forgotError.hidden = false;
+      }
+    }
+  });
 });

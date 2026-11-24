@@ -72,7 +72,12 @@
         </label>
 
         <label>
-          Account Password
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <span>Account Password</span>
+            <button type="button" id="openForgotModalBtn" style="background: none; border: none; padding: 0; font-size: 12.5px; color: var(--primary); font-weight: 600; cursor: pointer; text-decoration: underline;">
+              Forgot Password?
+            </button>
+          </div>
           <input id="password" type="password" autocomplete="current-password" required placeholder="••••••••">
         </label>
 
@@ -104,6 +109,49 @@
       <small class="auth-note">
         Students use @mitsgwl.ac.in · Faculty accounts use @mitsgwalior.in
       </small>
+    </div>
+
+    <!-- Forgot Password Recovery Modal -->
+    <div class="modal-backdrop" id="forgotModal">
+      <div class="modal-card" style="max-width: 440px;">
+        <div class="modal-head">
+          <div>
+            <span class="section-label" style="color: var(--primary);">ACCOUNT RECOVERY</span>
+            <h2 style="font-size: 1.35rem; margin-top: 4px;">Reset Password</h2>
+            <p style="font-size: 13px; color: var(--muted); margin: 0;">Enter your institute email to set a new password.</p>
+          </div>
+          <button type="button" class="modal-close" id="closeForgotModal" aria-label="Close modal">✕</button>
+        </div>
+
+        <form id="forgotForm" style="display: grid; gap: 14px; margin-top: 16px;">
+          <label>
+            <span style="font-size: 13px; font-weight: 600;">Institute Email or Roll Number</span>
+            <input type="text" id="forgotEmail" required placeholder="e.g. 26cs1ay34@mitsgwl.ac.in">
+          </label>
+
+          <label>
+            <span style="font-size: 13px; font-weight: 600;">New Password</span>
+            <input type="password" id="forgotNewPass" required minlength="6" placeholder="At least 6 characters">
+          </label>
+
+          <label>
+            <span style="font-size: 13px; font-weight: 600;">Confirm New Password</span>
+            <input type="password" id="forgotConfirmPass" required minlength="6" placeholder="Re-enter new password">
+          </label>
+
+          <div style="font-size: 12px; color: var(--muted); line-height: 1.5; padding: 10px 12px; background: var(--soft); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+            ℹ️ <strong>Campus Support:</strong> If you lose account access, you can also contact the <strong>MITS Campus IT Helpdesk</strong> (J-Block Ext. 2101) or System Admin (<a href="mailto:admin@mitsgwl.ac.in" style="color: var(--primary);">admin@mitsgwl.ac.in</a>).
+          </div>
+
+          <p class="form-error" id="forgotError" hidden></p>
+          <p id="forgotSuccess" style="color: var(--found); background: var(--found-bg); border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin: 0;" hidden></p>
+
+          <div style="display: flex; gap: 10px; margin-top: 6px;">
+            <button type="button" class="btn secondary" id="cancelForgotBtn" style="flex: 1;">Cancel</button>
+            <button type="submit" class="btn primary" id="submitForgotBtn" style="flex: 1.5;">Update Password ✓</button>
+          </div>
+        </form>
+      </div>
     </div>
   </main>
 
