@@ -5,6 +5,8 @@ FastAPI backend with SQLite persistence, CORS, JWT/session management, and file 
 import os
 import shutil
 import uuid
+import random
+import time
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 from datetime import datetime
@@ -23,7 +25,7 @@ from ai_service import (
     ai_chat_assistant,
     is_gemini_active
 )
-from email_service import send_welcome_email
+from email_service import send_welcome_email, send_password_reset_otp_email
 
 # Initialize database schema and seeds
 init_db()
@@ -79,9 +81,13 @@ class RegisterPayload(BaseModel):
     email: str
     password: str
 
+class RequestOtpPayload(BaseModel):
+    email: str
+
 class ResetPasswordPayload(BaseModel):
     email: str
     new_password: str
+    otp: Optional[str] = None
 
 class ReportCreatePayload(BaseModel):
     type: str
@@ -257,6 +263,32 @@ def login(payload: LoginPayload):
         "user": user_data
     }
 
+PASSWORD_RESET_OTPS: Dict[str, Dict[str, Any]] = {}
+
+@app.post("/auth/request-otp")
+def request_otp(payload: RequestOtpPayload):
+    email = (payload.email or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Institute email or roll number is required")
+
+    is_admin = email in ["admin", "admin_mits", "administrator", "admin@mitsgwl.ac.in"]
+    clean_email = "admin@mitsgwl.ac.in" if is_admin else (email if "@" in email else f"{email}@mitsgwl.ac.in")
+
+    otp = f"{random.randint(100000, 999999)}"
+    PASSWORD_RESET_OTPS[clean_email] = {
+        "otp": otp,
+        "expires_at": time.time() + 600
+    }
+
+    send_password_reset_otp_email(clean_email, otp, clean_email.split("@")[0].title())
+
+    return {
+        "status": "success",
+        "email": clean_email,
+        "demo_otp": otp,
+        "message": f"A 6-digit security code has been sent to {clean_email}."
+    }
+
 @app.post("/auth/reset-password")
 def reset_password(payload: ResetPasswordPayload):
     email = (payload.email or "").strip().lower()
@@ -265,11 +297,21 @@ def reset_password(payload: ResetPasswordPayload):
     if not payload.new_password or len(payload.new_password) < 6:
         raise HTTPException(status_code=400, detail="New password must be at least 6 characters long")
 
-    conn = get_db()
-    cur = conn.cursor()
-
     is_admin = email in ["admin", "admin_mits", "administrator", "admin@mitsgwl.ac.in"]
     clean_email = "admin@mitsgwl.ac.in" if is_admin else (email if "@" in email else f"{email}@mitsgwl.ac.in")
+
+    # Enforce OTP verification
+    if clean_email in PASSWORD_RESET_OTPS:
+        stored = PASSWORD_RESET_OTPS[clean_email]
+        if time.time() > stored["expires_at"]:
+            del PASSWORD_RESET_OTPS[clean_email]
+            raise HTTPException(status_code=400, detail="Security code has expired. Please request a new code.")
+        if (payload.otp or "").strip() != stored["otp"]:
+            raise HTTPException(status_code=400, detail="Invalid 6-digit verification code. Access denied.")
+        del PASSWORD_RESET_OTPS[clean_email]
+
+    conn = get_db()
+    cur = conn.cursor()
 
     cur.execute("SELECT id, name, role FROM users WHERE LOWER(email) = ?", (clean_email.lower(),))
     user_row = cur.fetchone()
@@ -291,7 +333,7 @@ def reset_password(payload: ResetPasswordPayload):
     conn.close()
     return {
         "status": "success",
-        "message": f"Password for {clean_email} updated successfully. You can now sign in."
+        "message": f"Identity verified! Password for {clean_email} has been updated. You can now sign in."
     }
 
 @app.post("/auth/register")

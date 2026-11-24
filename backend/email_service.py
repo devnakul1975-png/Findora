@@ -325,3 +325,57 @@ def send_welcome_email(to_email: str, user_name: str, role: str = "student") -> 
         "to": to_email,
         "message": "Welcome email logged. Configure SMTP_USER and SMTP_PASSWORD to deliver live to Gmail."
     }
+
+def send_password_reset_otp_email(to_email: str, otp: str, user_name: str = "Student") -> Dict[str, Any]:
+    """
+    Sends a 6-digit OTP security code to the student's private email address.
+    """
+    if not to_email or "@" not in to_email:
+        return {"sent": False, "reason": "Invalid email address"}
+
+    subject = f"🔒 Your Findora Security Code: {otp}"
+    text_content = (
+        f"Hello {user_name},\n\n"
+        f"A password reset was requested for your Findora (SmartCampus MITS) account.\n\n"
+        f"Your 6-Digit One-Time Verification Code is:\n"
+        f"👉  {otp}  👈\n\n"
+        f"This code will expire in 10 minutes.\n"
+        f"If you did not request this code, your account is safe — do not share this code with anyone.\n\n"
+        f"Madhav Institute of Technology & Science, Gwalior"
+    )
+    html_content = f"""<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:24px;background:#0b0f19;font-family:-apple-system,sans-serif;color:#e2e8f0;">
+  <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:32px;text-align:center;">
+    <div style="font-size:28px;margin-bottom:12px;">🔒</div>
+    <h2 style="color:#ffffff;margin:0 0 8px;">Password Reset Verification</h2>
+    <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;">Use the one-time security code below to reset your password on Findora.</p>
+    <div style="background:rgba(59,130,246,0.15);border:2px dashed #3b82f6;border-radius:10px;padding:16px 24px;display:inline-block;margin-bottom:24px;">
+      <span style="font-family:monospace;font-size:32px;font-weight:900;letter-spacing:6px;color:#60a5fa;">{otp}</span>
+    </div>
+    <p style="color:#64748b;font-size:12px;margin:0;">Valid for 10 minutes. If you did not make this request, please ignore this email.</p>
+  </div>
+</body>
+</html>"""
+
+    if SMTP_USER and SMTP_PASSWORD:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
+            msg["To"] = to_email
+            msg.attach(MIMEText(text_content, "plain", "utf-8"))
+            msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+            context = ssl.create_default_context()
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=12) as server:
+                server.ehlo()
+                server.starttls(context=context)
+                server.ehlo()
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.sendmail(SMTP_USER, [to_email], msg.as_string())
+            return {"sent": True, "provider": "smtp", "to": to_email}
+        except Exception as e:
+            logger.error(f"OTP dispatch error to {to_email}: {e}")
+
+    return {"sent": False, "simulated": True, "to": to_email, "otp": otp}

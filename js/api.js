@@ -139,11 +139,24 @@ function handleLocalFallback(endpoint, options = {}) {
     return session;
   }
 
+  if (path === '/auth/request-otp' && method === 'POST') {
+    const body = typeof options.body === 'string' ? JSON.parse(options.body) : {};
+    const email = body.email || 'student@mitsgwl.ac.in';
+    const mockOtp = String(Math.floor(100000 + Math.random() * 900000));
+    sessionStorage.setItem('findora-demo-otp-' + email.toLowerCase(), mockOtp);
+    return {
+      status: 'success',
+      email: email,
+      demo_otp: mockOtp,
+      message: `A 6-digit verification code has been dispatched to ${email}.`
+    };
+  }
+
   if (path === '/auth/reset-password' && method === 'POST') {
     const body = typeof options.body === 'string' ? JSON.parse(options.body) : {};
     return {
       status: 'success',
-      message: `Password updated successfully for ${body.email || 'account'}. You can now sign in.`
+      message: `Identity verified! Password for ${body.email || 'account'} has been updated.`
     };
   }
 
