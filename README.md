@@ -13,7 +13,7 @@
 
 **Smart Campus Lost & Found** is a web platform designed for **Madhav Institute of Technology & Science (MITS), Gwalior**. It streamlines reporting, searching, algorithmic item matching, and proctor-reviewed handover of lost and found belongings across campus.
 
-The platform combines SQLite Write-Ahead Logging (WAL) persistence, role-based access control (Student / Faculty / Admin), SQLite-backed 2-step OTP password reset verification, a 4-signal heuristic item matching engine, and a searchable directory of **238 mapped MITS campus rooms**.
+The platform combines SQLite Write-Ahead Logging (WAL) persistence, role-based access control (Student / Faculty / Admin), SQLite-backed 2-step OTP password reset verification, a 4-signal heuristic item matching engine, and a searchable directory of **235 mapped MITS campus rooms**.
 
 ---
 
@@ -25,7 +25,7 @@ The platform combines SQLite Write-Ahead Logging (WAL) persistence, role-based a
 - **Active Filter Chips**: Dismissible filter tags with clear-all functionality.
 - **Visual Thumbnails**: Uploaded photos render directly on cards with automatic fallback to category icons.
 
-### 2. 📍 238 Mapped MITS Campus Locations
+### 2. 📍 235 Mapped MITS Campus Locations
 - Complete hierarchical directory of MITS campus rooms and blocks:
   - **Academic Classrooms**: e.g., `Classroom 113A J115`, `Classroom 101 J125`, `Main Building`.
   - **Departmental Laboratories**: e.g., `CIoT Lab M007`, `Cloud Computing Lab J140`, `ML Lab`.

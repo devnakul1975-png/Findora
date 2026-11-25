@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (roomCountEl) {
     const totalRooms = (typeof CAMPUS_LOCATIONS !== 'undefined' && Array.isArray(CAMPUS_LOCATIONS) && CAMPUS_LOCATIONS.length)
       ? CAMPUS_LOCATIONS.length
-      : 238;
+      : 235;
     roomCountEl.textContent = `${totalRooms}`;
   }
 
