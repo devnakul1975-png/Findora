@@ -36,7 +36,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Compression for high-traffic scalability (4,000+ users)
+# GZip compression for API responses
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Enable CORS for all local web origins
@@ -210,8 +210,8 @@ def login(payload: LoginPayload):
         cur.execute("SELECT * FROM users WHERE role = 'admin' LIMIT 1")
         user_row = cur.fetchone()
         
-        # Verify strictly that the password matches the admin credentials
-        if not user_row or (user_row["password_hash"] != hashed and payload.password != "admin123"):
+        # Verify strictly that the password matches the stored admin hash
+        if not user_row or user_row["password_hash"] != hashed:
             conn.close()
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -263,8 +263,6 @@ def login(payload: LoginPayload):
         "user": user_data
     }
 
-PASSWORD_RESET_OTPS: Dict[str, Dict[str, Any]] = {}
-
 @app.post("/auth/request-otp")
 def request_otp(payload: RequestOtpPayload):
     email = (payload.email or "").strip().lower()
@@ -275,19 +273,28 @@ def request_otp(payload: RequestOtpPayload):
     clean_email = "admin@mitsgwl.ac.in" if is_admin else (email if "@" in email else f"{email}@mitsgwl.ac.in")
 
     otp = f"{random.randint(100000, 999999)}"
-    PASSWORD_RESET_OTPS[clean_email] = {
-        "otp": otp,
-        "expires_at": time.time() + 600
-    }
+    expires_at = time.time() + 600
 
-    send_password_reset_otp_email(clean_email, otp, clean_email.split("@")[0].title())
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR REPLACE INTO password_reset_otps (email, otp, expires_at) VALUES (?, ?, ?)",
+        (clean_email.lower(), otp, expires_at)
+    )
+    conn.commit()
+    conn.close()
 
-    return {
+    email_res = send_password_reset_otp_email(clean_email, otp, clean_email.split("@")[0].title())
+
+    resp: Dict[str, Any] = {
         "status": "success",
         "email": clean_email,
-        "demo_otp": otp,
-        "message": f"A 6-digit security code has been sent to {clean_email}."
+        "simulated": bool(email_res.get("simulated", False)),
+        "message": f"A 6-digit security code has been dispatched to {clean_email}."
     }
+    if email_res.get("simulated"):
+        resp["demo_otp"] = otp
+    return resp
 
 @app.post("/auth/reset-password")
 def reset_password(payload: ResetPasswordPayload):
@@ -300,18 +307,28 @@ def reset_password(payload: ResetPasswordPayload):
     is_admin = email in ["admin", "admin_mits", "administrator", "admin@mitsgwl.ac.in"]
     clean_email = "admin@mitsgwl.ac.in" if is_admin else (email if "@" in email else f"{email}@mitsgwl.ac.in")
 
-    # Enforce OTP verification
-    if clean_email in PASSWORD_RESET_OTPS:
-        stored = PASSWORD_RESET_OTPS[clean_email]
-        if time.time() > stored["expires_at"]:
-            del PASSWORD_RESET_OTPS[clean_email]
-            raise HTTPException(status_code=400, detail="Security code has expired. Please request a new code.")
-        if (payload.otp or "").strip() != stored["otp"]:
-            raise HTTPException(status_code=400, detail="Invalid 6-digit verification code. Access denied.")
-        del PASSWORD_RESET_OTPS[clean_email]
-
     conn = get_db()
     cur = conn.cursor()
+
+    # Strictly enforce active, unexpired OTP verification from database
+    cur.execute("SELECT otp, expires_at FROM password_reset_otps WHERE LOWER(email) = ?", (clean_email.lower(),))
+    otp_row = cur.fetchone()
+    if not otp_row:
+        conn.close()
+        raise HTTPException(status_code=400, detail="No active verification code found. Please request an OTP first.")
+
+    if time.time() > float(otp_row["expires_at"]):
+        cur.execute("DELETE FROM password_reset_otps WHERE LOWER(email) = ?", (clean_email.lower(),))
+        conn.commit()
+        conn.close()
+        raise HTTPException(status_code=400, detail="Security code has expired. Please request a new code.")
+
+    if (payload.otp or "").strip() != str(otp_row["otp"]):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Invalid 6-digit verification code. Access denied.")
+
+    cur.execute("DELETE FROM password_reset_otps WHERE LOWER(email) = ?", (clean_email.lower(),))
+    conn.commit()
 
     cur.execute("SELECT id, name, role FROM users WHERE LOWER(email) = ?", (clean_email.lower(),))
     user_row = cur.fetchone()
@@ -392,12 +409,6 @@ def trigger_welcome_email(payload: EmailTriggerPayload):
         to_email=payload.email.lower(),
         user_name=payload.name or "Student"
     )
-
-@app.get("/auth/me")
-def get_current_user_profile(user = Depends(get_current_user)):
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    return user
 
 @app.get("/auth/me")
 def get_me(user = Depends(get_current_user)):
@@ -599,6 +610,9 @@ async def create_report_with_image(
 
 @app.patch("/reports/{report_id}/status")
 def update_user_report_status(report_id: int, status: str = Query(...), user = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required to update report status")
+
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM reports WHERE id = ?", (report_id,))
@@ -606,6 +620,11 @@ def update_user_report_status(report_id: int, status: str = Query(...), user = D
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Report not found")
+
+    owner_email = (row["reporter_email"] or "").lower()
+    if user.get("role") != "admin" and owner_email != user["email"].lower():
+        conn.close()
+        raise HTTPException(status_code=403, detail="Forbidden: Only the report owner or admin can update status")
 
     cur.execute("UPDATE reports SET status = ? WHERE id = ?", (status, report_id))
     conn.commit()
@@ -627,6 +646,9 @@ def update_user_report_status(report_id: int, status: str = Query(...), user = D
 
 @app.delete("/reports/{report_id}")
 def delete_user_report(report_id: int, user = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required to delete a report")
+
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM reports WHERE id = ?", (report_id,))
@@ -634,6 +656,11 @@ def delete_user_report(report_id: int, user = Depends(get_current_user)):
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Report not found")
+
+    owner_email = (row["reporter_email"] or "").lower()
+    if user.get("role") != "admin" and owner_email != user["email"].lower():
+        conn.close()
+        raise HTTPException(status_code=403, detail="Forbidden: Only the report owner or admin can delete this report")
 
     cur.execute("DELETE FROM reports WHERE id = ?", (report_id,))
     conn.commit()
@@ -907,7 +934,7 @@ def get_admin_stats(admin = Depends(require_admin)):
     cur.execute("SELECT COUNT(*) FROM claims WHERE status = 'pending'")
     pending_claims = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM reports WHERE status = 'resolved' OR type = 'found'")
+    cur.execute("SELECT COUNT(*) FROM reports WHERE status = 'resolved'")
     reunited = cur.fetchone()[0]
 
     cur.execute("SELECT COUNT(*) FROM users")
@@ -919,7 +946,7 @@ def get_admin_stats(admin = Depends(require_admin)):
         "total_reports": total_reports,
         "pending_claims": pending_claims,
         "reunited": reunited,
-        "total_users": max(total_users, 4120)
+        "total_users": total_users
     }
 
 @app.get("/admin/claims")

@@ -141,22 +141,30 @@ function handleLocalFallback(endpoint, options = {}) {
 
   if (path === '/auth/request-otp' && method === 'POST') {
     const body = typeof options.body === 'string' ? JSON.parse(options.body) : {};
-    const email = body.email || 'student@mitsgwl.ac.in';
+    const rawEmail = (body.email || 'student@mitsgwl.ac.in').trim().toLowerCase();
+    const cleanEmail = rawEmail.includes('@') ? rawEmail : `${rawEmail}@mitsgwl.ac.in`;
     const mockOtp = String(Math.floor(100000 + Math.random() * 900000));
-    sessionStorage.setItem('findora-demo-otp-' + email.toLowerCase(), mockOtp);
+    sessionStorage.setItem('smartcampus-demo-otp-' + cleanEmail, mockOtp);
     return {
       status: 'success',
-      email: email,
+      email: cleanEmail,
       demo_otp: mockOtp,
-      message: `A 6-digit verification code has been dispatched to ${email}.`
+      message: `A 6-digit verification code has been dispatched to ${cleanEmail}.`
     };
   }
 
   if (path === '/auth/reset-password' && method === 'POST') {
     const body = typeof options.body === 'string' ? JSON.parse(options.body) : {};
+    const rawEmail = (body.email || '').trim().toLowerCase();
+    const cleanEmail = rawEmail.includes('@') ? rawEmail : `${rawEmail}@mitsgwl.ac.in`;
+    const storedOtp = sessionStorage.getItem('smartcampus-demo-otp-' + cleanEmail);
+    if (!storedOtp || String(body.otp || '').trim() !== storedOtp) {
+      throw new Error('Invalid or missing 6-digit verification code.');
+    }
+    sessionStorage.removeItem('smartcampus-demo-otp-' + cleanEmail);
     return {
       status: 'success',
-      message: `Identity verified! Password for ${body.email || 'account'} has been updated.`
+      message: `Identity verified! Password for ${cleanEmail || 'account'} has been updated.`
     };
   }
 
@@ -233,8 +241,8 @@ function handleLocalFallback(endpoint, options = {}) {
     return {
       total_reports: all.length,
       pending_claims: 2,
-      reunited: all.filter(r => r.status === 'resolved' || r.type === 'found').length,
-      total_users: 4120
+      reunited: all.filter(r => r.status === 'resolved').length,
+      total_users: 3
     };
   }
 

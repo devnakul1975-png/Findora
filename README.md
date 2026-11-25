@@ -1,20 +1,19 @@
-# 🎓 Findora (SmartCampus) — MITS Gwalior
-> **Intelligent, Geospatially-Enabled Campus Lost & Found Management Platform**
+# 🎓 Smart Campus Lost & Found — MITS Gwalior
+> **Intelligent Campus Lost & Found Management Platform for MITS-DU**
 
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.14-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%20(WAL%20Mode)-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
-[![Gemini AI](https://img.shields.io/badge/AI-Google%20Gemini%203.8%20Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev)
 [![Vercel Ready](https://img.shields.io/badge/Deployment-Vercel%20Serverless-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
-[![Tests Passing](https://img.shields.io/badge/Tests-19%2F19%20Passed-brightgreen?style=for-the-badge)](test_smartcampus_audit.py)
+[![Tests Passing](https://img.shields.io/badge/Tests-25%2F25%20Passed-brightgreen?style=for-the-badge)](test_smartcampus_audit.py)
 
 ---
 
 ## 📖 Overview
 
-**Findora (SmartCampus)** is a modern, production-grade web platform designed for **Madhav Institute of Technology & Science (MITS), Gwalior**. It streamlines the reporting, tracking, matching, and physical handover of lost and found belongings across the academic complex.
+**Smart Campus Lost & Found** is a web platform designed for **Madhav Institute of Technology & Science (MITS), Gwalior**. It streamlines reporting, searching, algorithmic item matching, and proctor-reviewed handover of lost and found belongings across campus.
 
-Engineered for **4,000+ concurrent students, faculty, and administrative staff**, the system combines high-concurrency database architecture, real-time claim verification, dual AI intelligence, and a geospatial campus directory covering 235+ academic venues.
+The platform combines SQLite Write-Ahead Logging (WAL) persistence, role-based access control (Student / Faculty / Admin), SQLite-backed 2-step OTP password reset verification, a 4-signal heuristic item matching engine, and a searchable directory of **238 mapped MITS campus rooms**.
 
 ---
 
@@ -26,19 +25,20 @@ Engineered for **4,000+ concurrent students, faculty, and administrative staff**
 - **Active Filter Chips**: Dismissible filter tags with clear-all functionality.
 - **Visual Thumbnails**: Uploaded photos render directly on cards with automatic fallback to category icons.
 
-### 2. 📍 235 Verified MITS Campus Locations
-- Complete hierarchical directory of MITS campus venues:
-  - **Academic Classrooms**: e.g., `Classroom 113A J115`, `Classroom 101`, `J-Block`.
-  - **Departmental Laboratories**: e.g., `CIoT Lab M007`, `Cloud Computing Lab J140`, `AI Research Lab`.
-  - **Auditoriums & Public Spaces**: e.g., `Seminar Hall SH-12`, `Central Library`, `Campus Canteen`.
-- Intelligent fuzzy autocomplete on hero search and submission forms.
+### 2. 📍 238 Mapped MITS Campus Locations
+- Complete hierarchical directory of MITS campus rooms and blocks:
+  - **Academic Classrooms**: e.g., `Classroom 113A J115`, `Classroom 101 J125`, `Main Building`.
+  - **Departmental Laboratories**: e.g., `CIoT Lab M007`, `Cloud Computing Lab J140`, `ML Lab`.
+  - **Auditoriums & Public Spaces**: e.g., `Seminar Hall SH-12`, `Central Library`, `Conclave Centre`.
+- Autocomplete location filtering on hero search and submission forms.
 
-### 3. 🤖 Dual-Engine AI Intelligence
-- **Google Gemini 3.8 Flash Integration**:
-  - **Semantic Item Matching**: Compares lost items against found candidates and ranks matches with similarity scoring.
-  - **Auto-Enhance Reports**: Cleans up titles, expands descriptions, and generates search tags.
-  - **Campus Assistant Chatbot**: Conversational AI assistant answering campus recovery queries in real-time.
-- **Offline Heuristic Engine**: Automatically activates if no API key is provided or during network outages, ensuring 100% platform uptime.
+### 3. ⚡ 4-Signal Algorithmic Match Engine
+- **100-Point Heuristic Scorer** (and optional external LLM API support if configured):
+  - **Category Weight (+35 pts)**: Matches lost/found items within the same belonging category.
+  - **Keyword Token Overlap (+35 pts)**: Measures cleaned token intersection across titles and descriptions.
+  - **Block Proximity (+20 pts)**: Scores exact room matches or shared campus building blocks.
+  - **Recency (+10 pts)**: Weights reports filed on the same day or close timeframe.
+- **Campus Assistant Drawer**: Interactive quick-lookup helper for campus listings and procedures.
 
 ### 4. 🛡️ Proctor Claim & Handover Verification
 - Students can submit verified ownership claims with proof and context.
@@ -81,15 +81,15 @@ smartcampus2026/
 ├── .vercelignore                # Vercel deployment exclusions
 ├── start-backend.bat            # 1-Click local development server launcher
 ├── start-backend-prod.bat       # 1-Click production multi-worker launcher
-├── test_smartcampus_audit.py    # Automated 19-test audit verification suite
+├── test_smartcampus_audit.py    # Automated 25-test audit verification suite
 │
 ├── api/
 │   └── index.py                 # Vercel serverless FastAPI entrypoint
 │
 ├── backend/
 │   ├── main.py                  # Core FastAPI application & REST endpoints
-│   ├── database.py              # SQLite high-concurrency WAL database engine
-│   ├── ai_service.py            # Dual AI engine (Google Gemini 3.8 Flash + local heuristic)
+│   ├── database.py              # SQLite WAL mode persistence layer
+│   ├── ai_service.py            # 4-signal smart matcher & campus assistant logic
 │   ├── smartcampus.db           # Seeded SQLite database
 │   ├── .env.example             # Environment variable template
 │   ├── requirements.txt         # Backend Python packages
@@ -215,22 +215,20 @@ SmartCampus includes zero-config serverless support for Vercel:
    ```powershell
    vercel --prod
    ```
-3. In your Vercel Project Settings under **Environment Variables**, add:
-   - `SMTP_USER`: Your sender Gmail address (e.g. `yourname@gmail.com`).
-   - `SMTP_PASSWORD`: Your 16-character Gmail App Password (from Google Account > Security > 2-Step Verification > App Passwords).
-   - `GEMINI_API_KEY`: *(Optional)* Your Google Gemini API Key for AI matchmaking.
+3. Optional environment variables in Vercel Project Settings:
+   - `SMTP_USER` / `SMTP_PASSWORD`: Gmail App credentials for live email dispatch (falls back to interactive simulation mode if unset).
 
 ---
 
 ## 🧪 Automated Test Suite
 
-A complete verification suite is included to validate security, password hashing, claim workflows, image uploads, and page integrity:
+A complete verification suite validates security boundaries, OTP reset checks, claim workflows, image uploads, and page integrity:
 
 ```powershell
 python test_smartcampus_audit.py
 ```
 
-### Verified Test Matrix (19/19 Tests Passed):
+### Verified Test Matrix (25/25 Tests Passed):
 - `[PASS]` API Root Status Online
 - `[PASS]` SEC-01: Admin Bypass Token Rejected (HTTP 403)
 - `[PASS]` SEC-02a: Wrong Password Rejected for Student (HTTP 401)
@@ -247,7 +245,13 @@ python test_smartcampus_audit.py
 - `[PASS]` AI Status Operational
 - `[PASS]` AI Auto-Enhance Report
 - `[PASS]` AI Conversational Assistant Reply
-- `[PASS]` Frontend: All 9 Core HTML Pages Present
+- `[PASS]` SEC-03a: Password Reset Without OTP Blocked (HTTP 400)
+- `[PASS]` SEC-03b: OTP Issued in Persistent SQLite Store
+- `[PASS]` SEC-03c: Incorrect 6-Digit OTP Rejected (HTTP 400)
+- `[PASS]` SEC-03d: Valid OTP Resets Password
+- `[PASS]` SEC-04: Unauthenticated Report Deletion Blocked (HTTP 401)
+- `[PASS]` STAT-01: Admin Stats Reflects Real Database User Count
+- `[PASS]` Frontend: All 10 Core HTML Pages Present
 - `[PASS]` UI-01: Mobile Navigation Drawer Present on All Sub-pages
 - `[PASS]` CLN-01: Dead 0-byte Header Removed
 
@@ -266,7 +270,8 @@ For complete technical logs and security audit records, refer to:
 ## 🏛️ Credits & Institutional Information
 
 - **Institution**: [Madhav Institute of Technology & Science (MITS), Gwalior](https://web.mitsgwalior.in/) (Established 1957)
-- **Project**: Findora — Intelligent Campus Lost & Found Platform
+- **Project**: Smart Campus Lost & Found Platform
+- **Team Repository**: [https://github.com/WECID-coding/SmartCampus](https://github.com/WECID-coding/SmartCampus)
 - **Project Co-Leads & System Architects**:
   - **Dev Khandelwal** (Full Stack Architect & Backend Lead)
     - Branch: Computer Science & Engineering

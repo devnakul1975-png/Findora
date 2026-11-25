@@ -195,27 +195,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Update Metrics Strip Dynamically
+  // 5. Update Metrics Strip Dynamically with Real Counts
   const roomCountEl = document.getElementById('statCampusRooms');
   if (roomCountEl) {
-    const totalRooms = (typeof CAMPUS_LOCATIONS !== 'undefined' && Array.isArray(CAMPUS_LOCATIONS) && CAMPUS_LOCATIONS.length) 
-      ? CAMPUS_LOCATIONS.length 
-      : 235;
-    roomCountEl.textContent = `${totalRooms}+`;
+    const totalRooms = (typeof CAMPUS_LOCATIONS !== 'undefined' && Array.isArray(CAMPUS_LOCATIONS) && CAMPUS_LOCATIONS.length)
+      ? CAMPUS_LOCATIONS.length
+      : 238;
+    roomCountEl.textContent = `${totalRooms}`;
   }
 
-  const activeUsersEl = document.getElementById('statActiveUsers');
-  if (activeUsersEl) {
-    activeUsersEl.textContent = '4,000+';
-  }
-
-  const reunitedRateEl = document.getElementById('statReunitedRate');
-  if (reunitedRateEl && typeof getReports === 'function') {
+  if (typeof getReports === 'function') {
     const reports = getReports();
-    if (reports.length > 0) {
-      const resolvedCount = reports.filter(r => r.status === 'resolved' || r.type === 'found').length;
-      const rate = Math.min(99, Math.max(85, Math.round((resolvedCount / reports.length) * 100)));
-      reunitedRateEl.textContent = `${rate}%`;
+    const totalEl = document.getElementById('statTotalReports');
+    const foundEl = document.getElementById('statFoundItems');
+    if (totalEl) totalEl.textContent = reports.length;
+    if (foundEl) {
+      const foundCount = reports.filter(r => r.type === 'found' || r.status === 'resolved').length;
+      foundEl.textContent = foundCount;
     }
   }
 });

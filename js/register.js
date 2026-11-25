@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (registerCard && successCard) {
           registerCard.hidden = true;
           successCard.hidden = false;
-          if (greetingEl) greetingEl.textContent = `Welcome to Findora, ${name}!`;
+          if (greetingEl) greetingEl.textContent = `Welcome to Smart Campus Lost & Found, ${name}!`;
           if (emailBadge) emailBadge.textContent = `✉️ ${email}`;
         }
 

@@ -1,5 +1,5 @@
 """
-SmartCampus MITS (Findora) - Email Notification Service
+SmartCampus MITS (Lost & Found) - Email Notification Service
 Handles automated welcome emails upon user registration, ownership claim verifications,
 and status updates via Gmail SMTP or API service.
 """
@@ -21,7 +21,7 @@ SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("SMTP_USER") or os.environ.get("GMAIL_USER") or ""
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD") or os.environ.get("SMTP_PASS") or os.environ.get("GMAIL_APP_PASSWORD") or ""
-SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Findora - SmartCampus MITS")
+SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "SmartCampus Lost & Found - MITS")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 
 def generate_welcome_html(user_name: str, to_email: str, role: str = "student") -> str:
@@ -31,7 +31,7 @@ def generate_welcome_html(user_name: str, to_email: str, role: str = "student") 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Findora (SmartCampus MITS)</title>
+  <title>Welcome to SmartCampus Lost &amp; Found (MITS Gwalior)</title>
   <style>
     body {{
       margin: 0;
@@ -333,10 +333,10 @@ def send_password_reset_otp_email(to_email: str, otp: str, user_name: str = "Stu
     if not to_email or "@" not in to_email:
         return {"sent": False, "reason": "Invalid email address"}
 
-    subject = f"🔒 Your Findora Security Code: {otp}"
+    subject = f"🔒 Your SmartCampus Security Code: {otp}"
     text_content = (
         f"Hello {user_name},\n\n"
-        f"A password reset was requested for your Findora (SmartCampus MITS) account.\n\n"
+        f"A password reset was requested for your SmartCampus Lost & Found (MITS) account.\n\n"
         f"Your 6-Digit One-Time Verification Code is:\n"
         f"👉  {otp}  👈\n\n"
         f"This code will expire in 10 minutes.\n"
@@ -349,7 +349,7 @@ def send_password_reset_otp_email(to_email: str, otp: str, user_name: str = "Stu
   <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:32px;text-align:center;">
     <div style="font-size:28px;margin-bottom:12px;">🔒</div>
     <h2 style="color:#ffffff;margin:0 0 8px;">Password Reset Verification</h2>
-    <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;">Use the one-time security code below to reset your password on Findora.</p>
+    <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;">Use the one-time security code below to reset your password on SmartCampus Lost &amp; Found.</p>
     <div style="background:rgba(59,130,246,0.15);border:2px dashed #3b82f6;border-radius:10px;padding:16px 24px;display:inline-block;margin-bottom:24px;">
       <span style="font-family:monospace;font-size:32px;font-weight:900;letter-spacing:6px;color:#60a5fa;">{otp}</span>
     </div>
@@ -374,7 +374,7 @@ def send_password_reset_otp_email(to_email: str, otp: str, user_name: str = "Stu
                 server.ehlo()
                 server.login(SMTP_USER, SMTP_PASSWORD)
                 server.sendmail(SMTP_USER, [to_email], msg.as_string())
-            return {"sent": True, "provider": "smtp", "to": to_email}
+            return {"sent": True, "simulated": False, "provider": "smtp", "to": to_email}
         except Exception as e:
             logger.error(f"OTP dispatch error to {to_email}: {e}")
 

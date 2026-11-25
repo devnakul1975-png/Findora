@@ -98,10 +98,10 @@ async function renderAdminStats() {
 
   if (statTotal) statTotal.textContent = reports.length;
   if (statReunited) {
-    const reunitedCount = reports.filter(r => r.status === 'resolved' || r.type === 'found').length;
+    const reunitedCount = reports.filter(r => r.status === 'resolved').length;
     statReunited.textContent = reunitedCount;
   }
-  if (statUsers) statUsers.textContent = '4,120+';
+  if (statUsers) statUsers.textContent = '--';
 
   // Accurate pending claims count from persistent claims store
   const claims = getAdminClaims();
@@ -114,7 +114,8 @@ async function renderAdminStats() {
       if (stats) {
         if (statTotal && stats.total_reports !== undefined) statTotal.textContent = stats.total_reports;
         if (statReunited && stats.reunited !== undefined) statReunited.textContent = stats.reunited;
-        if (statUsers && stats.total_users !== undefined) statUsers.textContent = `${Number(stats.total_users).toLocaleString()}+`;
+        if (statUsers && stats.total_users !== undefined) statUsers.textContent = Number(stats.total_users).toLocaleString();
+        if (statPending && stats.pending_claims !== undefined) statPending.textContent = stats.pending_claims;
       }
     }
   } catch {}

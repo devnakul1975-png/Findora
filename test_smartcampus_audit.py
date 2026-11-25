@@ -4,8 +4,15 @@ Tests security hardening, API routes, student claim tracking, image uploads, AI 
 """
 import sys
 import io
+import os
 import json
+import tempfile
 from pathlib import Path
+
+# Isolate audit database in a temp file so seed DB stays untouched
+_tmp_db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+_tmp_db.close()
+os.environ["SMARTCAMPUS_DB_PATH"] = _tmp_db.name
 
 # Ensure backend directory is in sys.path
 PROJECT_ROOT = Path(__file__).parent.resolve()
@@ -199,6 +206,69 @@ def run_tests():
         "AI Conversational Assistant Reply",
         res.status_code == 200 and len(ai_reply.get("reply", "")) > 10,
         res.text
+    )
+
+    # --- 10b. Security Hardening: 2-Step OTP Enforcement & Report Ownership ---
+    test_reset_email = "otp.audit.student@mitsgwl.ac.in"
+    # Direct reset without requesting OTP MUST be rejected (HTTP 400)
+    res = client.post("/auth/reset-password", json={
+        "email": test_reset_email,
+        "otp": "123456",
+        "new_password": "hackedpassword"
+    })
+    assert_test(
+        "SEC-03a: Password Reset Without OTP Blocked",
+        res.status_code == 400,
+        f"Expected 400, got {res.status_code}: {res.text}"
+    )
+
+    # Request OTP and verify wrong OTP is rejected
+    res = client.post("/auth/request-otp", json={"email": test_reset_email})
+    issued_otp = res.json().get("demo_otp", "")
+    assert_test(
+        "SEC-03b: OTP Issued in Persistent SQLite Store",
+        res.status_code == 200 and len(issued_otp) == 6,
+        f"Response: {res.text}"
+    )
+
+    res = client.post("/auth/reset-password", json={
+        "email": test_reset_email,
+        "otp": "000000" if issued_otp != "000000" else "999999",
+        "new_password": "newpass123"
+    })
+    assert_test(
+        "SEC-03c: Incorrect 6-Digit OTP Rejected",
+        res.status_code == 400,
+        f"Expected 400, got {res.status_code}: {res.text}"
+    )
+
+    # Correct OTP succeeds and subsequent login works
+    res = client.post("/auth/reset-password", json={
+        "email": test_reset_email,
+        "otp": issued_otp,
+        "new_password": "verifiedpass99"
+    })
+    assert_test(
+        "SEC-03d: Valid OTP Resets Password",
+        res.status_code == 200 and res.json().get("status") == "success",
+        f"Response: {res.text}"
+    )
+
+    # Unauthenticated delete on test report MUST fail (401)
+    res = client.delete(f"/reports/{test_report_id}")
+    assert_test(
+        "SEC-04: Unauthenticated Report Deletion Blocked",
+        res.status_code == 401,
+        f"Expected 401, got {res.status_code}: {res.text}"
+    )
+
+    # Verify /admin/stats returns honest database count (not inflated 4120+)
+    res = client.get("/admin/stats", headers=admin_headers)
+    stats_json = res.json()
+    assert_test(
+        "STAT-01: Admin Stats Reflects Real Database User Count",
+        res.status_code == 200 and stats_json.get("total_users", 9999) < 100,
+        f"Stats returned: {stats_json}"
     )
 
     # --- 11. Frontend File Integrity & Mobile Navigation ---

@@ -11,7 +11,10 @@ from pathlib import Path
 
 IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 
-if IS_VERCEL:
+CUSTOM_DB_PATH = os.environ.get("SMARTCAMPUS_DB_PATH")
+if CUSTOM_DB_PATH:
+    DB_FILE = Path(CUSTOM_DB_PATH)
+elif IS_VERCEL:
     TMP_DIR = Path(tempfile.gettempdir())
     DB_FILE = TMP_DIR / "smartcampus.db"
     ORIGINAL_DB = Path(__file__).parent / "smartcampus.db"
@@ -26,7 +29,7 @@ else:
 def get_db():
     conn = sqlite3.connect(DB_FILE, timeout=30.0, check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    # High-concurrency performance tuning (for 4,000+ users)
+    # Enable SQLite WAL mode for concurrent reads and writes
     conn.execute("PRAGMA journal_mode = WAL;")
     conn.execute("PRAGMA synchronous = NORMAL;")
     conn.execute("PRAGMA busy_timeout = 10000;")
@@ -115,7 +118,16 @@ def init_db():
     )
     """)
 
-    # High-Performance Indexes for 4,000+ Users
+    # Password Reset OTPs Table (persists OTP challenges across requests/workers)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS password_reset_otps (
+        email TEXT PRIMARY KEY,
+        otp TEXT NOT NULL,
+        expires_at REAL NOT NULL
+    )
+    """)
+
+    # Indexed columns for common queries
     cur.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);")
