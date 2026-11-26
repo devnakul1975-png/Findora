@@ -78,7 +78,10 @@ async function apiFetch(endpoint, options = {}) {
   let res;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3500);
+    // Allow sufficient time for serverless cold starts & external SMTP Gmail dispatch
+    const isMailRoute = endpoint.includes('/auth/register') || endpoint.includes('/auth/request-otp') || endpoint.includes('/auth/send-welcome-email');
+    const timeoutMs = isMailRoute ? 12000 : 8000;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     res = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers,

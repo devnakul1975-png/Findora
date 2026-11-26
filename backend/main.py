@@ -289,9 +289,16 @@ def request_otp(payload: RequestOtpPayload):
     resp: Dict[str, Any] = {
         "status": "success",
         "email": clean_email,
+        "email_sent": bool(email_res.get("sent", False)),
         "simulated": bool(email_res.get("simulated", False)),
-        "message": f"A 6-digit security code has been dispatched to {clean_email}."
+        "message": (
+            f"A 6-digit security code has been emailed to {clean_email}."
+            if email_res.get("sent")
+            else f"OTP generated for {clean_email} (Email service not configured — Demo Mode)."
+        )
     }
+    if email_res.get("error"):
+        resp["email_error"] = email_res.get("error")
     if email_res.get("simulated"):
         resp["demo_otp"] = otp
     return resp

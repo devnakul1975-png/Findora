@@ -149,8 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (forgotSubtitle) forgotSubtitle.textContent = 'Step 2: Enter the 6-digit code sent to your private inbox.';
 
       if (otpNotice) {
-        const demoNote = res.demo_otp ? `<br><strong style="color: #facc15; font-size: 11.5px;">[Campus Viva/Demo Mode: Code is ${res.demo_otp}]</strong>` : '';
-        otpNotice.innerHTML = `📨 ${res.message || 'OTP verification code dispatched to your private institute inbox!'}${demoNote}`;
+        const errNote = res.email_error ? `<br><span style="color: #fb7185; font-size: 11px;">[Mail Config Error: ${res.email_error}]</span>` : '';
+        const demoNote = res.demo_otp ? `<br><strong style="color: #facc15; font-size: 11.5px;">[Demo Mode (SMTP not set on server): Code is ${res.demo_otp}]</strong>` : '';
+        otpNotice.innerHTML = `📨 ${res.message || 'Verification code ready!'}${errNote}${demoNote}`;
       }
 
       // Auto-focus OTP input

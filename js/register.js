@@ -47,21 +47,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         setSession(data);
 
-        // Display confirmation state with Gmail direct link
+        // Display accurate email confirmation state
         const registerCard = document.getElementById('registerCard');
         const successCard = document.getElementById('registerSuccessCard');
         const greetingEl = document.getElementById('successGreeting');
         const emailBadge = document.getElementById('registeredEmailBadge');
+        const statusDesc = document.getElementById('registerEmailStatusText');
 
         if (registerCard && successCard) {
           registerCard.hidden = true;
           successCard.hidden = false;
           if (greetingEl) greetingEl.textContent = `Welcome to Smart Campus Lost & Found, ${name}!`;
           if (emailBadge) emailBadge.textContent = `✉️ ${email}`;
+          if (statusDesc) {
+            statusDesc.textContent = data.email_sent
+              ? 'Your account is active and a live welcome email has been delivered to your inbox:'
+              : 'Your account is active! (Live email dispatch is in Demo mode until Gmail SMTP env variables are configured on Vercel):';
+          }
         }
 
         if (typeof showToast === 'function') {
-          showToast('Account Created! ✉️', `Welcome confirmation email sent to ${email}.`);
+          if (data.email_sent) {
+            showToast('Account Created & Email Sent! ✉️', `Welcome email delivered to ${email}.`);
+          } else {
+            showToast('Account Created ✓', `Registered ${email}. Add SMTP credentials on Vercel for live Gmail delivery.`);
+          }
         }
       } catch (err) {
         if (submitBtn) {

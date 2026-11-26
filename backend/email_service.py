@@ -240,29 +240,69 @@ def generate_welcome_html(user_name: str, to_email: str, role: str = "student") 
 </body>
 </html>"""
 
-def send_welcome_email(to_email: str, user_name: str, role: str = "student") -> Dict[str, Any]:
-    """
-    Sends a rich welcome confirmation email to the user's Gmail / institute address.
-    Supports Resend HTTP API and standard Gmail / TLS SMTP.
-    """
-    if not to_email or "@" not in to_email:
-        return {"sent": False, "reason": "Invalid email address"}
+def _get_email_config() -> Dict[str, Any]:
+    """Read email credentials dynamically from environment at send time."""
+    raw_pass = os.environ.get("SMTP_PASSWORD") or os.environ.get("SMTP_PASS") or os.environ.get("GMAIL_APP_PASSWORD") or ""
+    # Strip spaces automatically in case user pastes Google's 16-char 'xxxx xxxx xxxx xxxx' App Password directly
+    clean_pass = raw_pass.replace(" ", "").strip()
+    return {
+        "smtp_host": os.environ.get("SMTP_HOST", "smtp.gmail.com").strip(),
+        "smtp_port": int(os.environ.get("SMTP_PORT", "587")),
+        "smtp_user": (os.environ.get("SMTP_USER") or os.environ.get("GMAIL_USER") or "").strip(),
+        "smtp_pass": clean_pass,
+        "from_name": os.environ.get("SMTP_FROM_NAME", "Smart Campus Lost & Found - MITS").strip(),
+        "resend_key": os.environ.get("RESEND_API_KEY", "").strip(),
+        "resend_from": os.environ.get("RESEND_FROM", "SmartCampus MITS <onboarding@resend.dev>").strip(),
+    }
 
-    html_content = generate_welcome_html(user_name, to_email, role)
-    text_content = (
-        f"Welcome to SmartCampus MITS, {user_name}!\n\n"
-        f"Your account ({to_email}) has been successfully created on the MITS Findora network.\n"
-        f"Visit the portal at https://smartcampusmits.vercel.app/ to report or claim lost articles.\n\n"
-        f"Campus Pickup Hub: Central Library Circulation Desk\n"
-        f"Madhav Institute of Technology & Science, Gwalior"
-    )
-    subject = f"🎉 Welcome to Findora (SmartCampus MITS) — Account Registered"
 
-    # Option 1: Resend HTTP API (Works seamlessly on Vercel without SMTP ports)
-    if RESEND_API_KEY:
+def _dispatch_email(to_email: str, subject: str, text_content: str, html_content: str) -> Dict[str, Any]:
+    """Shared email transport via Resend HTTP API or Gmail/TLS/SSL SMTP, with simulated demo fallback."""
+    cfg = _get_email_config()
+
+    # Option 1: Gmail SMTP / Standard SMTP (works to any student Gmail inbox with 16-char App Password)
+    if cfg["smtp_user"] and cfg["smtp_pass"]:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"{cfg['from_name']} <{cfg['smtp_user']}>"
+            msg["To"] = to_email
+            msg.attach(MIMEText(text_content, "plain", "utf-8"))
+            msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+            context = ssl.create_default_context()
+            if cfg["smtp_port"] == 465:
+                with smtplib.SMTP_SSL(cfg["smtp_host"], cfg["smtp_port"], timeout=12, context=context) as server:
+                    server.login(cfg["smtp_user"], cfg["smtp_pass"])
+                    server.sendmail(cfg["smtp_user"], [to_email], msg.as_string())
+            else:
+                with smtplib.SMTP(cfg["smtp_host"], cfg["smtp_port"], timeout=12) as server:
+                    server.ehlo()
+                    server.starttls(context=context)
+                    server.ehlo()
+                    server.login(cfg["smtp_user"], cfg["smtp_pass"])
+                    server.sendmail(cfg["smtp_user"], [to_email], msg.as_string())
+
+            logger.info(f"Email successfully sent via SMTP to {to_email}")
+            return {"sent": True, "simulated": False, "provider": "smtp", "to": to_email}
+        except Exception as e:
+            logger.error(f"SMTP dispatch error to {to_email}: {e}")
+            smtp_err = str(e)
+            # Fall through to Resend API if configured, otherwise return clean SMTP failure info
+            if not cfg["resend_key"]:
+                return {
+                    "sent": False,
+                    "simulated": True,
+                    "provider": "smtp",
+                    "error": smtp_err,
+                    "message": f"SMTP send failed ({smtp_err}). Verify Gmail App Password & SMTP_USER."
+                }
+
+    # Option 2: Resend HTTP API fallback / primary
+    if cfg["resend_key"]:
         try:
             req_data = {
-                "from": os.environ.get("RESEND_FROM", "Findora MITS <onboarding@resend.dev>"),
+                "from": cfg["resend_from"],
                 "to": [to_email],
                 "subject": subject,
                 "html": html_content,
@@ -272,75 +312,65 @@ def send_welcome_email(to_email: str, user_name: str, role: str = "student") -> 
                 "https://api.resend.com/emails",
                 data=json.dumps(req_data).encode("utf-8"),
                 headers={
-                    "Authorization": f"Bearer {RESEND_API_KEY}",
+                    "Authorization": f"Bearer {cfg['resend_key']}",
                     "Content-Type": "application/json"
                 },
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
                 if resp.status in (200, 201):
-                    logger.info(f"Welcome email sent via Resend API to {to_email}")
-                    return {"sent": True, "provider": "resend", "to": to_email}
+                    logger.info(f"Email sent via Resend API to {to_email}")
+                    return {"sent": True, "simulated": False, "provider": "resend", "to": to_email}
         except Exception as e:
-            logger.warning(f"Resend API send failed: {e}. Falling back to SMTP.")
-
-    # Option 2: Gmail SMTP / Standard SMTP
-    if SMTP_USER and SMTP_PASSWORD:
-        try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
-            msg["To"] = to_email
-
-            msg.attach(MIMEText(text_content, "plain", "utf-8"))
-            msg.attach(MIMEText(html_content, "html", "utf-8"))
-
-            context = ssl.create_default_context()
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=12) as server:
-                server.ehlo()
-                server.starttls(context=context)
-                server.ehlo()
-                server.login(SMTP_USER, SMTP_PASSWORD)
-                server.sendmail(SMTP_USER, [to_email], msg.as_string())
-
-            logger.info(f"Welcome email successfully sent via Gmail SMTP to {to_email}")
-            return {"sent": True, "provider": "smtp", "to": to_email}
-        except Exception as e:
-            logger.error(f"SMTP dispatch error to {to_email}: {e}")
+            logger.warning(f"Resend API send failed: {e}")
             return {
                 "sent": False,
-                "provider": "smtp",
+                "simulated": True,
+                "provider": "resend",
                 "error": str(e),
-                "message": f"SMTP dispatch failed: {str(e)}"
+                "message": f"Resend API failed: {str(e)}"
             }
 
-    # Fallback / Simulated mode when SMTP is not yet configured in environment variables
-    logger.info(
-        f"[DEMO / SIMULATED] Welcome email prepared for {to_email}. "
-        f"To send live emails to Gmail, add SMTP_USER and SMTP_PASSWORD in Vercel environment variables."
-    )
+    # Fallback / Simulated mode when no mail provider env vars are configured
+    logger.info(f"[DEMO / SIMULATED] Email prepared for {to_email}. Add SMTP_USER & SMTP_PASSWORD to send live.")
     return {
         "sent": False,
         "simulated": True,
         "to": to_email,
-        "message": "Welcome email logged. Configure SMTP_USER and SMTP_PASSWORD to deliver live to Gmail."
+        "message": "Email simulated (configure SMTP_USER & SMTP_PASSWORD in Vercel env vars for live Gmail delivery)."
     }
 
-def send_password_reset_otp_email(to_email: str, otp: str, user_name: str = "Student") -> Dict[str, Any]:
-    """
-    Sends a 6-digit OTP security code to the student's private email address.
-    """
-    if not to_email or "@" not in to_email:
-        return {"sent": False, "reason": "Invalid email address"}
 
-    subject = f"🔒 Your SmartCampus Security Code: {otp}"
+def send_welcome_email(to_email: str, user_name: str, role: str = "student") -> Dict[str, Any]:
+    """Sends a welcome confirmation email to the user's Gmail / institute address."""
+    if not to_email or "@" not in to_email:
+        return {"sent": False, "simulated": True, "reason": "Invalid email address"}
+
+    html_content = generate_welcome_html(user_name, to_email, role)
+    text_content = (
+        f"Welcome to Smart Campus Lost & Found (MITS Gwalior), {user_name}!\n\n"
+        f"Your account ({to_email}) has been registered.\n"
+        f"Visit https://smartcampusmits.vercel.app/ to report or claim lost items.\n\n"
+        f"Campus Desk: Central Library Circulation Desk\n"
+        f"Madhav Institute of Technology & Science, Gwalior"
+    )
+    subject = "Welcome to Smart Campus Lost & Found (MITS Gwalior)"
+    return _dispatch_email(to_email, subject, text_content, html_content)
+
+
+def send_password_reset_otp_email(to_email: str, otp: str, user_name: str = "Student") -> Dict[str, Any]:
+    """Sends a 6-digit OTP security code to the user's private email address."""
+    if not to_email or "@" not in to_email:
+        return {"sent": False, "simulated": True, "reason": "Invalid email address"}
+
+    subject = f"Your SmartCampus Password Reset Code: {otp}"
     text_content = (
         f"Hello {user_name},\n\n"
-        f"A password reset was requested for your SmartCampus Lost & Found (MITS) account.\n\n"
-        f"Your 6-Digit One-Time Verification Code is:\n"
-        f"👉  {otp}  👈\n\n"
-        f"This code will expire in 10 minutes.\n"
-        f"If you did not request this code, your account is safe — do not share this code with anyone.\n\n"
+        f"A password reset was requested for your Smart Campus Lost & Found (MITS) account.\n\n"
+        f"Your 6-Digit Verification Code is:\n"
+        f"  {otp}\n\n"
+        f"This code expires in 10 minutes.\n"
+        f"If you did not request this code, ignore this message.\n\n"
         f"Madhav Institute of Technology & Science, Gwalior"
     )
     html_content = f"""<!DOCTYPE html>
@@ -349,7 +379,7 @@ def send_password_reset_otp_email(to_email: str, otp: str, user_name: str = "Stu
   <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:32px;text-align:center;">
     <div style="font-size:28px;margin-bottom:12px;">🔒</div>
     <h2 style="color:#ffffff;margin:0 0 8px;">Password Reset Verification</h2>
-    <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;">Use the one-time security code below to reset your password on SmartCampus Lost &amp; Found.</p>
+    <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;">Use the one-time security code below to reset your password on Smart Campus Lost &amp; Found.</p>
     <div style="background:rgba(59,130,246,0.15);border:2px dashed #3b82f6;border-radius:10px;padding:16px 24px;display:inline-block;margin-bottom:24px;">
       <span style="font-family:monospace;font-size:32px;font-weight:900;letter-spacing:6px;color:#60a5fa;">{otp}</span>
     </div>
@@ -358,24 +388,7 @@ def send_password_reset_otp_email(to_email: str, otp: str, user_name: str = "Stu
 </body>
 </html>"""
 
-    if SMTP_USER and SMTP_PASSWORD:
-        try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
-            msg["To"] = to_email
-            msg.attach(MIMEText(text_content, "plain", "utf-8"))
-            msg.attach(MIMEText(html_content, "html", "utf-8"))
-
-            context = ssl.create_default_context()
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=12) as server:
-                server.ehlo()
-                server.starttls(context=context)
-                server.ehlo()
-                server.login(SMTP_USER, SMTP_PASSWORD)
-                server.sendmail(SMTP_USER, [to_email], msg.as_string())
-            return {"sent": True, "simulated": False, "provider": "smtp", "to": to_email}
-        except Exception as e:
-            logger.error(f"OTP dispatch error to {to_email}: {e}")
-
-    return {"sent": False, "simulated": True, "to": to_email, "otp": otp}
+    res = _dispatch_email(to_email, subject, text_content, html_content)
+    if res.get("simulated"):
+        res["otp"] = otp
+    return res
